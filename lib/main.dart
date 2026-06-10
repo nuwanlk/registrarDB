@@ -52,32 +52,66 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Row(
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Database for Searching Certificates in Books',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              'Divisional Secretariat Weligama',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
+            ),
+          ],
+        ),
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+      ),
+      body: Column(
         children: [
-          NavigationRail(
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (int index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
-            labelType: NavigationRailLabelType.all,
-            destinations: const [
-              NavigationRailDestination(
-                icon: Icon(Icons.add_box),
-                selectedIcon: Icon(Icons.add_box),
-                label: Text('Enter Data'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.search),
-                selectedIcon: Icon(Icons.search),
-                label: Text('Search'),
-              ),
-            ],
-          ),
-          const VerticalDivider(thickness: 1, width: 1),
           Expanded(
-            child: _pages[_selectedIndex],
+            child: Row(
+              children: [
+                NavigationRail(
+                  selectedIndex: _selectedIndex,
+                  onDestinationSelected: (int index) {
+                    setState(() {
+                      _selectedIndex = index;
+                    });
+                  },
+                  labelType: NavigationRailLabelType.all,
+                  destinations: const [
+                    NavigationRailDestination(
+                      icon: Icon(Icons.add_box),
+                      selectedIcon: Icon(Icons.add_box),
+                      label: Text('Enter Data'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.search),
+                      selectedIcon: Icon(Icons.search),
+                      label: Text('Search'),
+                    ),
+                  ],
+                ),
+                const VerticalDivider(thickness: 1, width: 1),
+                Expanded(
+                  child: _pages[_selectedIndex],
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(8.0),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            child: Text(
+              'Created by ICTA - T G N Thisara Divisional Secretariat Weligama',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
           ),
         ],
       ),
@@ -364,6 +398,48 @@ class _SearchPageState extends State<SearchPage> {
     });
   }
 
+  Future<void> _deleteRecord(int id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Delete'),
+        content: const Text('Are you sure you want to delete this record?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await supabase.from('filedata').delete().eq('id', id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Record deleted')),
+          );
+          _search(); // Refresh results
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -503,6 +579,7 @@ class _SearchPageState extends State<SearchPage> {
                               DataColumn(label: Text("Mother's Name")),
                               DataColumn(label: Text('B-Cert No')),
                               DataColumn(label: Text('Book No')),
+                              DataColumn(label: Text('Actions')),
                             ],
                             rows: _searchResults.map((data) {
                               return DataRow(cells: [
@@ -515,6 +592,12 @@ class _SearchPageState extends State<SearchPage> {
                                 DataCell(Text(data['mothers_name'] ?? '')),
                                 DataCell(Text(data['B_cert_no'] ?? '')),
                                 DataCell(Text(data['book_no'] ?? '')),
+                                DataCell(
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                    onPressed: () => _deleteRecord(data['id']),
+                                  ),
+                                ),
                               ]);
                             }).toList(),
                           ),
