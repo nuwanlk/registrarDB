@@ -16,7 +16,7 @@ void main() async {
   runApp(const MyApp());
 }
 
-SupabaseClient get supabase => Supabase.instance.client; // Use a getter instead of a final variable
+SupabaseClient get supabase => Supabase.instance.client;
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -25,9 +25,36 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Registrar DB',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF0056b3),
+          brightness: Brightness.light,
+        ),
         useMaterial3: true,
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.grey[50],
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey[300]!),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF0056b3), width: 2),
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
       ),
       home: const MainNavigationPage(),
     );
@@ -52,26 +79,48 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Database for Searching Certificates in Books',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              'Divisional Secretariat Weligama',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                  ),
-            ),
-          ],
-        ),
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-      ),
       body: Column(
         children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.account_balance, color: Colors.white, size: 32),
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Database for Searching Certificates in Books',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      'Divisional Secretariat Weligama',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.9),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
           Expanded(
             child: Row(
               children: [
@@ -82,15 +131,18 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
                       _selectedIndex = index;
                     });
                   },
+                  backgroundColor: Colors.grey[100],
                   labelType: NavigationRailLabelType.all,
+                  selectedIconTheme: const IconThemeData(size: 30),
+                  unselectedIconTheme: const IconThemeData(size: 24),
                   destinations: const [
                     NavigationRailDestination(
-                      icon: Icon(Icons.add_box),
-                      selectedIcon: Icon(Icons.add_box),
+                      icon: Icon(Icons.add_circle_outline),
+                      selectedIcon: Icon(Icons.add_circle),
                       label: Text('Enter Data'),
                     ),
                     NavigationRailDestination(
-                      icon: Icon(Icons.search),
+                      icon: Icon(Icons.search_outlined),
                       selectedIcon: Icon(Icons.search),
                       label: Text('Search'),
                     ),
@@ -98,19 +150,30 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
                 ),
                 const VerticalDivider(thickness: 1, width: 1),
                 Expanded(
-                  child: _pages[_selectedIndex],
+                  child: Container(
+                    color: Colors.white,
+                    child: _pages[_selectedIndex],
+                  ),
                 ),
               ],
             ),
           ),
+          // Footer
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(8.0),
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              border: Border(top: BorderSide(color: Colors.grey[300]!)),
+            ),
             child: Text(
-              'Created by ICTA - T G N Thisara Divisional Secretariat Weligama',
+              'Created by ICTA - T G N Thisara | Divisional Secretariat Weligama',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.labelSmall,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[700],
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -168,7 +231,6 @@ class _DataEntryPageState extends State<DataEntryPage> {
     setState(() => _isSaving = true);
 
     try {
-      debugPrint('Attempting insert...');
       await supabase.from('filedata').insert({
         'division': _divisionController.text.trim(),
         'DOB': _selectedDate != null
@@ -180,13 +242,18 @@ class _DataEntryPageState extends State<DataEntryPage> {
         'book_no': _bookNoController.text.trim(),
       });
 
-      debugPrint('Insert successful');
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Data saved successfully'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Data saved successfully'),
+              ],
+            ),
+            backgroundColor: Colors.green[700],
+            behavior: SnackBarBehavior.floating,
           ),
         );
         _formKey.currentState!.reset();
@@ -198,12 +265,12 @@ class _DataEntryPageState extends State<DataEntryPage> {
         setState(() => _selectedDate = null);
       }
     } catch (e) {
-      debugPrint('Insert error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Colors.red[700],
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -214,98 +281,152 @@ class _DataEntryPageState extends State<DataEntryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Data Entry (Sinhala Supported)',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _fullNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Full Name (සම්පූර්ණ නම)',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) =>
-                (value == null || value.trim().isEmpty) ? 'Required' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _divisionController,
-                decoration: const InputDecoration(
-                  labelText: 'Division (ප්‍රාදේශීය ලේකම් කාර්යාලය)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _selectedDate == null
-                          ? 'Select Date of Birth (උපන් දිනය)'
-                          : 'DOB: ${DateFormat('yyyy-MM-dd').format(_selectedDate!)}',
-                      style: Theme.of(context).textTheme.bodyMedium,
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32.0),
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.edit_note, color: Theme.of(context).primaryColor, size: 28),
+                        const SizedBox(width: 12),
+                        Text(
+                          'New Record Entry',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () => _selectDate(context),
-                    icon: const Icon(Icons.calendar_today),
-                    label: const Text('Pick Date'),
-                  ),
-                  if (_selectedDate != null)
-                    IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () => setState(() => _selectedDate = null),
+                    const Divider(height: 32),
+                    TextFormField(
+                      controller: _fullNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Full Name (සම්පූර්ණ නම)',
+                        prefixIcon: Icon(Icons.person),
+                      ),
+                      validator: (value) =>
+                          (value == null || value.trim().isEmpty) ? 'Name is required' : null,
                     ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _mothersNameController,
-                decoration: const InputDecoration(
-                  labelText: "Mother's Name (මවගේ නම)",
-                  border: OutlineInputBorder(),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _divisionController,
+                      decoration: const InputDecoration(
+                        labelText: 'Division (ප්‍රාදේශීය ලේකම් කාර්යාලය)',
+                        prefixIcon: Icon(Icons.business),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey[300]!),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.calendar_today, size: 20, color: Colors.grey),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    _selectedDate == null
+                                        ? 'Date of Birth (උපන් දිනය)'
+                                        : 'DOB: ${DateFormat('yyyy-MM-dd').format(_selectedDate!)}',
+                                    style: TextStyle(
+                                      color: _selectedDate == null ? Colors.grey[600] : Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        OutlinedButton.icon(
+                          onPressed: () => _selectDate(context),
+                          icon: const Icon(Icons.event),
+                          label: const Text('Pick Date'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                        if (_selectedDate != null)
+                          IconButton(
+                            icon: const Icon(Icons.clear, color: Colors.red),
+                            onPressed: () => setState(() => _selectedDate = null),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _mothersNameController,
+                      decoration: const InputDecoration(
+                        labelText: "Mother's Name (මවගේ නම)",
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _bCertNoController,
+                            decoration: const InputDecoration(
+                              labelText: 'Birth Certificate No',
+                              hintText: 'උප්පැන්න සහතික අංකය',
+                              prefixIcon: Icon(Icons.description),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _bookNoController,
+                            decoration: const InputDecoration(
+                              labelText: 'Book No (පොත් අංකය)',
+                              prefixIcon: Icon(Icons.menu_book),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 40),
+                    SizedBox(
+                      width: double.infinity,
+                      child: _isSaving
+                          ? const Center(child: CircularProgressIndicator())
+                          : ElevatedButton.icon(
+                              onPressed: _submitData,
+                              icon: const Icon(Icons.save),
+                              label: const Text(
+                                'Save Record',
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).primaryColor,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _bCertNoController,
-                decoration: const InputDecoration(
-                  labelText: 'Birth Certificate No (උප්පැන්න සහතික අංකය)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _bookNoController,
-                decoration: const InputDecoration(
-                  labelText: 'Book No (පොත් අංකය)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 30),
-              Center(
-                child: _isSaving
-                    ? const CircularProgressIndicator()
-                    : ElevatedButton.icon(
-                  onPressed: _submitData,
-                  icon: const Icon(Icons.save),
-                  label: const Text('Save Data'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 50, vertical: 15),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -324,8 +445,7 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   final TextEditingController _nameSearchController = TextEditingController();
-  final TextEditingController _divisionSearchController =
-  TextEditingController();
+  final TextEditingController _divisionSearchController = TextEditingController();
   final TextEditingController _motherSearchController = TextEditingController();
   DateTime? _dobSearch;
   List<Map<String, dynamic>> _searchResults = [];
@@ -350,36 +470,26 @@ class _SearchPageState extends State<SearchPage> {
       var query = supabase.from('filedata').select();
 
       if (_nameSearchController.text.trim().isNotEmpty) {
-        query =
-            query.ilike('full_name', '%${_nameSearchController.text.trim()}%');
+        query = query.ilike('full_name', '%${_nameSearchController.text.trim()}%');
       }
       if (_divisionSearchController.text.trim().isNotEmpty) {
-        query = query.ilike(
-            'division', '%${_divisionSearchController.text.trim()}%');
+        query = query.ilike('division', '%${_divisionSearchController.text.trim()}%');
       }
       if (_motherSearchController.text.trim().isNotEmpty) {
-        query = query.ilike(
-            'mothers_name', '%${_motherSearchController.text.trim()}%');
+        query = query.ilike('mothers_name', '%${_motherSearchController.text.trim()}%');
       }
       if (_dobSearch != null) {
-        query =
-            query.eq('DOB', DateFormat('yyyy-MM-dd').format(_dobSearch!));
+        query = query.eq('DOB', DateFormat('yyyy-MM-dd').format(_dobSearch!));
       }
 
-      final response = await query;
-      debugPrint('Search results: ${response.length} rows');
-
+      final response = await query.order('full_name', ascending: true);
       setState(() {
         _searchResults = List<Map<String, dynamic>>.from(response);
       });
     } catch (e) {
-      debugPrint('Search error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error searching: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Search error: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -402,16 +512,13 @@ class _SearchPageState extends State<SearchPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirm Delete'),
-        content: const Text('Are you sure you want to delete this record?'),
+        title: const Text('Delete Record?'),
+        content: const Text('This action cannot be undone. Are you sure?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
             child: const Text('Delete'),
           ),
         ],
@@ -422,19 +529,12 @@ class _SearchPageState extends State<SearchPage> {
       try {
         await supabase.from('filedata').delete().eq('id', id);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Record deleted')),
-          );
-          _search(); // Refresh results
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Record deleted')));
+          _search();
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error deleting: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Delete error: $e'), backgroundColor: Colors.red));
         }
       }
     }
@@ -443,170 +543,179 @@ class _SearchPageState extends State<SearchPage> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(24.0),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Search Filters ──
-          ExpansionTile(
-            title: const Text('Search Filters'),
-            initiallyExpanded: true,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: _nameSearchController,
-                      decoration: const InputDecoration(
-                        labelText: 'Name (නම)',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.person),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _divisionSearchController,
-                      decoration: const InputDecoration(
-                        labelText: 'Division (ප්‍රාදේශීය)',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.location_on),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _motherSearchController,
-                      decoration: const InputDecoration(
-                        labelText: "Mother's Name (මවගේ නම)",
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.person_outline),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _dobSearch == null
-                                ? 'Date of Birth (උපන් දිනය)'
-                                : 'DOB: ${DateFormat('yyyy-MM-dd').format(_dobSearch!)}',
-                          ),
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Search Filters', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _nameSearchController,
+                          decoration: const InputDecoration(labelText: 'Name', prefixIcon: Icon(Icons.person_search)),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.calendar_today),
-                          onPressed: () async {
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextField(
+                          controller: _divisionSearchController,
+                          decoration: const InputDecoration(labelText: 'Division', prefixIcon: Icon(Icons.location_on)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _motherSearchController,
+                          decoration: const InputDecoration(labelText: "Mother's Name", prefixIcon: Icon(Icons.face)),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () async {
                             final picked = await showDatePicker(
                               context: context,
                               initialDate: DateTime.now(),
                               firstDate: DateTime(1900),
                               lastDate: DateTime.now(),
                             );
-                            if (picked != null) {
-                              setState(() => _dobSearch = picked);
-                            }
+                            if (picked != null) setState(() => _dobSearch = picked);
                           },
-                        ),
-                        if (_dobSearch != null)
-                          IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () =>
-                                setState(() => _dobSearch = null),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey[300]!),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.calendar_month, color: Colors.grey, size: 20),
+                                const SizedBox(width: 12),
+                                Text(_dobSearch == null ? 'Date of Birth' : DateFormat('yyyy-MM-dd').format(_dobSearch!)),
+                                const Spacer(),
+                                if (_dobSearch != null)
+                                  IconButton(
+                                    icon: const Icon(Icons.close, size: 16),
+                                    onPressed: () => setState(() => _dobSearch = null),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                  ),
+                              ],
+                            ),
                           ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: _search,
-                          icon: const Icon(Icons.search),
-                          label: const Text('Search'),
                         ),
-                        const SizedBox(width: 12),
-                        OutlinedButton.icon(
-                          onPressed: _clearFilters,
-                          icon: const Icon(Icons.clear_all),
-                          label: const Text('Clear'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _clearFilters,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Reset'),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        onPressed: _search,
+                        icon: const Icon(Icons.search),
+                        label: const Text('Search'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).primaryColor,
+                          foregroundColor: Colors.white,
                         ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: 12),
-
-          // ── Results ──
+          const SizedBox(height: 24),
           if (_isLoading)
-            const Expanded(
-              child: Center(child: CircularProgressIndicator()),
-            )
+            const Expanded(child: Center(child: CircularProgressIndicator()))
           else if (!_hasSearched)
-            const Expanded(
-              child: Center(
-                child: Text('Use the filters above to search records.'),
-              ),
-            )
+            const Expanded(child: Center(child: Text('Enter criteria and search for records')))
           else if (_searchResults.isEmpty)
-              const Expanded(
-                child: Center(child: Text('No records found.')),
-              )
-            else
-              Expanded(
+            const Expanded(child: Center(child: Text('No matching records found')))
+          else
+            Expanded(
+              child: Card(
+                elevation: 1,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      '${_searchResults.length} record(s) found',
-                      style: Theme.of(context).textTheme.bodySmall,
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text('${_searchResults.length} Records Found', style: const TextStyle(fontWeight: FontWeight.bold)),
                     ),
-                    const SizedBox(height: 8),
+                    const Divider(height: 1),
                     Expanded(
                       child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: SingleChildScrollView(
-                          child: DataTable(
-                            headingRowColor: WidgetStateProperty.all(
-                              Theme.of(context)
-                                  .colorScheme
-                                  .primaryContainer,
+                        padding: const EdgeInsets.all(16),
+                        child: Table(
+                          columnWidths: const {
+                            0: FlexColumnWidth(3),
+                            1: FlexColumnWidth(2),
+                            2: FlexColumnWidth(2),
+                            3: FlexColumnWidth(2),
+                            4: FlexColumnWidth(2),
+                            5: FixedColumnWidth(60),
+                          },
+                          children: [
+                            TableRow(
+                              decoration: BoxDecoration(color: Colors.grey[100]),
+                              children: const [
+                                Padding(padding: EdgeInsets.all(12), child: Text('Full Name', style: TextStyle(fontWeight: FontWeight.bold))),
+                                Padding(padding: EdgeInsets.all(12), child: Text('DOB', style: TextStyle(fontWeight: FontWeight.bold))),
+                                Padding(padding: EdgeInsets.all(12), child: Text('Division', style: TextStyle(fontWeight: FontWeight.bold))),
+                                Padding(padding: EdgeInsets.all(12), child: Text('Mother', style: TextStyle(fontWeight: FontWeight.bold))),
+                                Padding(padding: EdgeInsets.all(12), child: Text('B-Cert / Book', style: TextStyle(fontWeight: FontWeight.bold))),
+                                Padding(padding: EdgeInsets.all(12), child: Text('', style: TextStyle(fontWeight: FontWeight.bold))),
+                              ],
                             ),
-                            columns: const [
-                              DataColumn(label: Text('Full Name')),
-                              DataColumn(label: Text('DOB')),
-                              DataColumn(label: Text('Division')),
-                              DataColumn(label: Text("Mother's Name")),
-                              DataColumn(label: Text('B-Cert No')),
-                              DataColumn(label: Text('Book No')),
-                              DataColumn(label: Text('Actions')),
-                            ],
-                            rows: _searchResults.map((data) {
-                              return DataRow(cells: [
-                                DataCell(Text(data['full_name'] ?? '')),
-                                DataCell(Text(data['DOB'] != null
-                                    ? DateFormat('yyyy-MM-dd').format(
-                                    DateTime.parse(data['DOB']))
-                                    : '')),
-                                DataCell(Text(data['division'] ?? '')),
-                                DataCell(Text(data['mothers_name'] ?? '')),
-                                DataCell(Text(data['B_cert_no'] ?? '')),
-                                DataCell(Text(data['book_no'] ?? '')),
-                                DataCell(
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.red),
+                            ..._searchResults.map((data) => TableRow(
+                              decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE)))),
+                              children: [
+                                Padding(padding: const EdgeInsets.all(12), child: Text(data['full_name'] ?? '-')),
+                                Padding(padding: const EdgeInsets.all(12), child: Text(data['DOB'] ?? '-')),
+                                Padding(padding: const EdgeInsets.all(12), child: Text(data['division'] ?? '-')),
+                                Padding(padding: const EdgeInsets.all(12), child: Text(data['mothers_name'] ?? '-')),
+                                Padding(padding: const EdgeInsets.all(12), child: Text('${data['B_cert_no'] ?? ''} / ${data['book_no'] ?? ''}')),
+                                Padding(
+                                  padding: const EdgeInsets.all(4),
+                                  child: IconButton(
+                                    icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
                                     onPressed: () => _deleteRecord(data['id']),
                                   ),
                                 ),
-                              ]);
-                            }).toList(),
-                          ),
+                              ],
+                            )),
+                          ],
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
+            ),
         ],
       ),
     );
