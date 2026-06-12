@@ -56,13 +56,159 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const MainNavigationPage(),
+      home: const LoginPage(),
     );
   }
 }
 
+// ─── LOGIN PAGE ───────────────────────────────────────────────────────────────
+
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _isPasswordVisible = false;
+  bool _isLoading = false;
+
+  Future<void> _login() async {
+    setState(() => _isLoading = true);
+    try {
+      // 1. Try to find the user in Supabase
+      final response = await supabase
+          .from('login')
+          .select()
+          .eq('username', _usernameController.text.trim())
+          .eq('password', _passwordController.text)
+          .maybeSingle();
+
+      if (response != null) {
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => MainNavigationPage(
+                username: response['username'],
+              ),
+            ),
+          );
+        }
+      } else {
+        // 2. Fallback: Check if the login table is empty and credentials are default
+        final List<dynamic> anyUsers = await supabase.from('login').select('username').limit(1);
+        
+        if (anyUsers.isEmpty && 
+            _usernameController.text == 'Admin' && 
+            _passwordController.text == 'admin') {
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => const MainNavigationPage(username: 'Admin'),
+              ),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Invalid username or password'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Login error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[100],
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400),
+          padding: const EdgeInsets.all(32),
+          child: Card(
+            elevation: 8,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.lock_person, size: 64, color: Color(0xFF0056b3)),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Registrar DB Login',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 32),
+                  TextField(
+                    controller: _usernameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Username',
+                      prefixIcon: Icon(Icons.person),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: !_isPasswordVisible,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: const Icon(Icons.key),
+                      suffixIcon: IconButton(
+                        icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off),
+                        onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                      ),
+                    ),
+                    onSubmitted: (_) => _login(),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : ElevatedButton(
+                            onPressed: _login,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0056b3),
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('Login', style: TextStyle(fontSize: 16)),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── MAIN NAVIGATION PAGE ─────────────────────────────────────────────────────
+
 class MainNavigationPage extends StatefulWidget {
-  const MainNavigationPage({super.key});
+  final String username;
+  const MainNavigationPage({super.key, required this.username});
 
   @override
   State<MainNavigationPage> createState() => _MainNavigationPageState();
@@ -71,10 +217,17 @@ class MainNavigationPage extends StatefulWidget {
 class _MainNavigationPageState extends State<MainNavigationPage> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = [
-    const DataEntryPage(),
-    const SearchPage(),
-  ];
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      const DataEntryPage(),
+      const SearchPage(),
+      ChangePasswordPage(currentUsername: widget.username),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +241,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
               color: Theme.of(context).colorScheme.primary,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withAlpha(25),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -118,6 +271,16 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
                     ),
                   ],
                 ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.logout, color: Colors.white),
+                  tooltip: 'Logout',
+                  onPressed: () {
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (context) => const LoginPage()),
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -145,6 +308,11 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
                       icon: Icon(Icons.search_outlined),
                       selectedIcon: Icon(Icons.search),
                       label: Text('Search'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.settings_outlined),
+                      selectedIcon: Icon(Icons.settings),
+                      label: Text('Settings'),
                     ),
                   ],
                 ),
@@ -177,6 +345,166 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── CHANGE PASSWORD PAGE ─────────────────────────────────────────────────────
+
+class ChangePasswordPage extends StatefulWidget {
+  final String currentUsername;
+  const ChangePasswordPage({super.key, required this.currentUsername});
+
+  @override
+  State<ChangePasswordPage> createState() => _ChangePasswordPageState();
+}
+
+class _ChangePasswordPageState extends State<ChangePasswordPage> {
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _currentPasswordController = TextEditingController();
+  final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+  bool _isUpdating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _usernameController.text = widget.currentUsername;
+  }
+
+  Future<void> _updatePassword() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isUpdating = true);
+
+    try {
+      // 1. Verify current password first
+      final verifyResponse = await supabase
+          .from('login')
+          .select()
+          .eq('username', widget.currentUsername)
+          .eq('password', _currentPasswordController.text)
+          .maybeSingle();
+
+      if (verifyResponse == null) {
+        // Check if we are in the "First Run" scenario (Empty table + Admin/admin)
+        final anyUsers = await supabase.from('login').select('username').limit(1);
+        
+        if (anyUsers.isEmpty && 
+            widget.currentUsername == 'Admin' && 
+            _currentPasswordController.text == 'admin') {
+          // It's the first run, we need to INSERT instead of UPDATE
+          await supabase.from('login').insert({
+            'username': _usernameController.text.trim(),
+            'password': _newPasswordController.text,
+          });
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Current password is incorrect'), backgroundColor: Colors.red),
+            );
+          }
+          return;
+        }
+      } else {
+        // Standard update
+        await supabase.from('login').update({
+          'username': _usernameController.text.trim(),
+          'password': _newPasswordController.text,
+        }).eq('username', widget.currentUsername);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Credentials updated successfully'), backgroundColor: Colors.green),
+        );
+        _currentPasswordController.clear();
+        _newPasswordController.clear();
+        _confirmPasswordController.clear();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Update error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(32.0),
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Settings', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                    const Divider(height: 32),
+                    TextFormField(
+                      controller: _usernameController,
+                      decoration: const InputDecoration(labelText: 'Username', prefixIcon: Icon(Icons.person_outline)),
+                      validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _currentPasswordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(labelText: 'Current Password', prefixIcon: Icon(Icons.lock_outline)),
+                      validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _newPasswordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(labelText: 'New Password', prefixIcon: Icon(Icons.lock_reset)),
+                      validator: (v) => (v == null || v.length < 4) ? 'Password must be at least 4 characters' : null,
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _confirmPasswordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(labelText: 'Confirm New Password', prefixIcon: Icon(Icons.lock_reset)),
+                      validator: (v) {
+                        if (v != _newPasswordController.text) return 'Passwords do not match';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 40),
+                    SizedBox(
+                      width: double.infinity,
+                      child: _isUpdating
+                          ? const Center(child: CircularProgressIndicator())
+                          : ElevatedButton.icon(
+                              onPressed: _updatePassword,
+                              icon: const Icon(Icons.save),
+                              label: const Text('Update Credentials'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0056b3),
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -322,7 +650,7 @@ class _DataEntryPageState extends State<DataEntryPage> {
                     TextFormField(
                       controller: _divisionController,
                       decoration: const InputDecoration(
-                        labelText: 'Division (ප්‍රාදේශීය ලේකම් කාර්යාලය)',
+                        labelText: 'Division (කොට්ඨාසය)',
                         prefixIcon: Icon(Icons.business),
                       ),
                     ),
